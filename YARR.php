@@ -75,6 +75,16 @@ abstract class YARR
         return false;
     }
 
+    function __isset($k)
+    {
+        return isset($this->attributes[$k]);
+    }
+
+    function __unset($k)
+    {
+        return ($this->attributes[$k] = NULL);
+    }
+
     function __clone()
     {
         $this->attributes['id'] = NULL;
