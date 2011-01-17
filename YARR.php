@@ -36,7 +36,21 @@ abstract class YARR
         $this->attributes = array('id' => NULL);
 
         foreach(static::$schema as $k => $v) {
-            if (array_key_exists($k, $data)) {
+
+            /* expect to get an id in construct for has_many relations */
+            if ($v['type'] == 'has_many') {
+                if(array_key_exists('key', $v)) {
+                    $k2 = $v['key'];
+                } else {
+                    $k2 = $k.'_id';
+                }
+
+                if (array_key_exists($k2, $data)) {
+                    $this->attributes[$k] = $data[$k2];
+                } else {
+                    $this->attributes[$k] = NULL;
+                }
+            } else if (array_key_exists($k, $data)) {
                 if (is_bool($data[$k])) $data[$k] = (int)$data[$k]; // FIXME: generalize
                 $this->attributes[$k] = $data[$k];
             } else {
@@ -48,6 +62,10 @@ abstract class YARR
                     $this->attributes[$k] = NULL;
                 }
             }
+        }
+
+        if (array_key_exists('id', $data)) {
+            $this->attributes['id'] = $data['id'];
         }
     }
 
@@ -61,7 +79,7 @@ abstract class YARR
             /* when getting a has_many relation, replace the internal integer value with an object, save will use it's id */
             if (array_key_exists($k, static::$schema) && static::$schema[$k]['type'] == 'has_many') {
                 if ($this->attributes[$k] !== NULL && is_numeric($this->attributes[$k])) {
-                    $this->attributes[$k] = call_user_func(static::$schema[$k]['class'].'::find', 'first', array('where' => array('id = ?', $this->attributes[$k])));
+                    $this->attributes[$k] = call_user_func(static::$schema[$k]['class'].'::find', 'one', array('where' => array('id = ?', $this->attributes[$k])));
                 }
             }
             return $this->attributes[$k];
@@ -76,8 +94,22 @@ abstract class YARR
         if (array_key_exists($k, $this->attributes)) {
             /* disallow saving a wrong object in has_many relation */
             if (static::$schema[$k]['type'] == 'has_many') {
-                if (is_object($v) && get_class($v) != static::$schema[$k]['class']) {
-                    return false;
+                if (is_object($v)) {
+                    if(get_class($v) != static::$schema[$k]['class']) {
+                        return false;
+                    }
+
+                    /* check for non-dirty set (for optimizing) */
+                    if (!is_null($this->attributes[$k]) && $v->id == $this->attributes[$k]) {
+                        $this->attributes[$k] = $v;
+                        return true;
+                    }
+                } else if(is_numeric($v)) {
+                    /* check for non-dirty set (for optimizing) */
+                    if ($this->attributes[$k] == $v) {
+                        $this->attributes[$k] = $v;
+                        return true;
+                    }
                 }
             }
             $this->__dirty[$k] = true;
@@ -104,12 +136,17 @@ abstract class YARR
 
     function toArray()
     {
-        /* FIXME: trigger has_many relations so the result will have objects instead of integers */
+        /* trigger all has_many relations */
+        foreach(static::$schema as $k => $v) {
+            if ($v['type'] == 'has_many') {
+                $this->$k;
+            }
+        }
         return (array)(clone (object)$this->attributes);
     }
 
     /**
-     * $keys = array of primary keys, 'all', 'first' or 'last'
+     * $keys = array of primary keys, 'all' or 'one'
      * $options = (
      *      'where'     => 'WHERE' or array('WHERE', bind, bind, ...),
      *      'limit'     => int,
@@ -121,9 +158,70 @@ abstract class YARR
      *      'having'    => 'HAVING'
      * )
      */
-    function find($keys, $options)
+    static function find($keys, $options = array())
     {
-        return NULL;
+        $class = get_called_class();
+
+        if (is_null(static::$table)) {
+            $table = strtolower($class);
+        } else {
+            $table = static::$table;
+        }
+
+        if ( (is_string($keys) && $keys == 'one') || is_numeric($keys) ) {
+            $options['offset'] = 0;
+            $options['limit'] = 1;
+        }
+
+        $sel = 'SELECT * FROM '.self::quoteName($table, true);
+
+        if (array_key_exists('where', $options)) {
+            $where = $options['where'];
+            if (is_array($where)) {
+                $str = array_shift($where);
+                if (is_string($str)) {
+                    $str = ' WHERE '.$str;
+                    foreach($where as $v) {
+                        $str = preg_replace('/\?/', self::quote(NULL, $v), $str, 1);
+                    }
+                    $sel .= $str;
+                }
+            } else if(is_string($where)) {
+                $sel .= ' WHERE '.$where;
+            }
+        } else if (is_numeric($keys)) {
+            $sel .= ' WHERE id = '.self::quote(NULL, $keys);
+        }
+
+        if (array_key_exists('order', $options)) {
+            $sel .= " ORDER BY {$options['order']}";
+        }
+
+        if (array_key_exists('limit', $options)) {
+            if (array_key_exists('offset', $options)) {
+                $offset = (int)$options['offset'];
+            } else {
+                $offset = 0;
+            }
+            $limit = (int)$options['limit'];
+            $sel .= " LIMIT {$offset},{$limit}";
+        }
+
+        $ret = array();
+        $stmt = self::$db->query($sel);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $ret[] = new $class($row);
+        }
+
+        if (count($ret) == 0) {
+            return NULL;
+        }
+
+        if ( (is_string($keys) && $keys == 'one') || is_numeric($keys) ) {
+            return array_shift($ret);
+        }
+
+        return $ret;
     }
 
     function validate()
@@ -173,7 +271,7 @@ abstract class YARR
             }
 
             if (array_key_exists('unique', $data) && $data['unique']) {
-                if (!is_null(self::find('first', array('where' => array('id = ?', $this->attributes[$k])))))
+                if (!is_null(self::find('one', array('where' => array('id = ?', $this->attributes[$k])))))
                     $this->errors[] = $k;
             }
         }
@@ -255,10 +353,12 @@ abstract class YARR
 
     private static function quote($key, $value)
     {
-        /* save has_many relations correctly */
-        if (static::$schema[$key]['type'] == 'has_many') {
-            if (is_object($value))
-                $value = $value->id;
+        if ($key) {
+            /* save has_many relations correctly */
+            if (static::$schema[$key]['type'] == 'has_many') {
+                if (is_object($value))
+                    $value = $value->id;
+            }
         }
 
         /* integer values as integer */
@@ -277,7 +377,6 @@ abstract class YARR
         /* has_many relation key handling */
         if (!$raw) {
             if (static::$schema[$str]['type'] == 'has_many') {
-            if ($str == 'host')
                 if (array_key_exists('key', static::$schema[$str])) {
                     $str = static::$schema[$str];
                 } else {
