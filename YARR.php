@@ -61,7 +61,7 @@ abstract class YARR
             /* when getting a has_many relation, replace the internal integer value with an object, save will use it's id */
             if (array_key_exists($k, static::$schema) && static::$schema[$k]['type'] == 'has_many') {
                 if ($this->attributes[$k] !== NULL && is_numeric($this->attributes[$k])) {
-                    $this->attributes[$k] = call_user_func(static::$schema[$k]['class'].'::find', 'first', array('id = ?', $this->attributes[$k]));
+                    $this->attributes[$k] = call_user_func(static::$schema[$k]['class'].'::find', 'first', array('where' => array('id = ?', $this->attributes[$k])));
                 }
             }
             return $this->attributes[$k];
@@ -173,7 +173,7 @@ abstract class YARR
             }
 
             if (array_key_exists('unique', $data) && $data['unique']) {
-                if (!is_null(self::find('first', array('id = ?', $this->attributes[$k]))))
+                if (!is_null(self::find('first', array('where' => array('id = ?', $this->attributes[$k])))))
                     $this->errors[] = $k;
             }
         }
