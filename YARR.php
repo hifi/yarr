@@ -137,12 +137,14 @@ abstract class YARR
     function toArray()
     {
         /* trigger all has_many relations */
+        $ret = array();
         foreach(static::$schema as $k => $v) {
             if ($v['type'] == 'has_many') {
                 $this->$k;
             }
+            $ret[$k] = $this->$k;
         }
-        return (array)(clone (object)$this->attributes);
+        return $ret;
     }
 
     /**
@@ -211,10 +213,6 @@ abstract class YARR
         $stmt = self::$db->query($sel);
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $ret[] = new $class($row);
-        }
-
-        if (count($ret) == 0) {
-            return NULL;
         }
 
         if ( (is_string($keys) && $keys == 'one') || is_numeric($keys) ) {
@@ -339,7 +337,7 @@ abstract class YARR
             $pairs[] = self::quoteName($k).' = '.self::quote($k, $this->attributes[$k]);
         }
 
-        self::$db->exec('UPDATE '.self::quoteName($table, true).' SET '.implode($pairs, ',').' WHERE '.self::quoteName('id').' = '.self::quote($k, $this->attributes['id']));
+        self::$db->exec('UPDATE '.self::quoteName($table, true).' SET '.implode($pairs, ',').' WHERE '.self::quoteName('id', true).' = '.self::quote($k, $this->attributes['id']));
     }
 
     static function init(PDO $db, $treat_empty_as_null = true)
