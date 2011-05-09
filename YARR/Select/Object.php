@@ -27,4 +27,9 @@ class YARR_Select_Object extends YARR_Select
 
         return $ret;
     }
+
+    public function current()
+    {
+        return $this->iterator_cur ? new $this->class($this->iterator_cur) : null;
+    }
 }
