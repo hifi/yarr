@@ -129,6 +129,15 @@ class YARR
 
         if (array_key_exists($name, static::$belongs_to)) {
             $desc = static::$belongs_to[$name];
+            $key = isset($desc['key']) ? $desc['key'] : static::table().'_id';
+            $select = $desc['class']::select();
+            $db = $select->getAdapter();
+            $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
+            return $select;
+        }
+
+        if (array_key_exists($name, static::$has_one)) {
+            $desc = static::$has_one[$name];
             $key = isset($desc['key']) ? $desc['key'] : $desc['class']::table().'_id';
             if (array_key_exists($key, $this->_data)) {
                 $tmp = $desc['class']::select()->where('id = ?', $this->_data[$key]);
@@ -137,6 +146,11 @@ class YARR
         }
 
         return self::$_false;
+    }
+
+    function toArray()
+    {
+        return (array)(clone (object)$this->_data);
     }
 
     function validate()
@@ -168,5 +182,17 @@ class YARR
 
         $this->_dirty = array();
         return true;
+    }
+
+    function destroy()
+    {
+        if ($this->_data['id']) {
+            self::$db->delete(static::table(), self::$db->quoteInto('id = ?', $this->_data['id']));
+            $this->_data['id'] = null;
+            $this->_dirty = array_keys($this->_data);
+            return true;
+        }
+
+        return false;
     }
 }
