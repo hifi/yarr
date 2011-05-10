@@ -16,7 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-class YARR
+abstract class YARR_Abstract
 {
     const table = false;
 
@@ -30,12 +30,12 @@ class YARR
     protected $_data;
     protected $_dirty;
 
-    static public function setDb(Zend_Db_Adapter_Abstract $db)
+    static public function setDefaultAdapter(Zend_Db_Adapter_Abstract $db)
     {
         self::$db = $db;
     }
 
-    static public function getDb()
+    static public function getDefaultAdapter()
     {
         return self::$db;
     }
@@ -191,7 +191,7 @@ class YARR
         return true;
     }
 
-    function destroy()
+    function delete()
     {
         if ($this->_data['id']) {
             self::$db->delete(static::table(), self::$db->quoteInto('id = ?', $this->_data['id']));

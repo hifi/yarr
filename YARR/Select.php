@@ -25,7 +25,7 @@ class YARR_Select extends Zend_Db_Select implements Countable, Iterator
 
     function __construct($table)
     {
-        $this->db = YARR::getDb();
+        $this->db = YARR_Abstract::getDefaultAdapter();
         parent::__construct($this->db);
         $this->from($table);
     }

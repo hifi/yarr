@@ -16,7 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-class YARR_Formatted extends YARR
+abstract class YARR_Formatted_Abstract extends YARR_Abstract
 {
     protected $_format;
 
