@@ -25,6 +25,7 @@ abstract class YARR_Abstract
 
     protected static $has_one = array();
     protected static $has_many = array();
+    protected static $belongs_to = array();
     protected static $has_and_belongs_to_many = array();
 
     protected $_data;
