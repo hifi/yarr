@@ -25,11 +25,13 @@ abstract class YARR_Abstract
 
     protected static $has_one = array();
     protected static $has_many = array();
+    protected static $has_and_belongs_to_many = array();
 
     protected $_data;
     protected $_dirty;
     protected $_has_one;
     protected $_has_many;
+    protected $_has_and_belongs_to_many;
 
     static public function setDefaultAdapter(Zend_Db_Adapter_Abstract $db)
     {
@@ -75,6 +77,7 @@ abstract class YARR_Abstract
         $this->_dirty = array();
         $this->_has_one = array();
         $this->_has_many = array();
+        $this->_has_and_belongs_to_many = array();
 
         /* handle defaults */
         foreach (static::fields() as $k => $desc) {
@@ -133,6 +136,13 @@ abstract class YARR_Abstract
             return $this->_has_one[$k];
         }
 
+        if (array_key_exists($k, static::$has_and_belongs_to_many)) {
+            if (!array_key_exists('data', $this->_has_and_belongs_to_many)) {
+                $this->_has_and_belongs_to_many[$k] = $this->$k()->getAll();
+            }
+            return $this->_has_and_belongs_to_many[$k];
+        }
+
         if (array_key_exists($k, $this->_data)) {
             return $this->_data[$k];
         }
@@ -172,6 +182,31 @@ abstract class YARR_Abstract
             if (array_key_exists($local, $this->_data)) {
                 return $select->where($db->quoteIdentifier($foreign).' = ?', $this->_data[$local]);
             }
+        }
+
+        if (array_key_exists($name, static::$has_and_belongs_to_many)) {
+            $desc = static::$has_and_belongs_to_many[$name];
+            $local = isset($desc['local']) ? $desc['local'] : strtolower(get_class($this)).'_id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : strtolower($desc['class']).'_id';
+
+            $my_table = static::table();
+            $their_table = $desc['class']::table();
+            if ($my_table < $their_table)
+                $join_table = $my_table . '_' . $their_table;
+            else
+                $join_table = $their_table . '_' . $my_table;
+
+            $select = $desc['class']::select();
+            $db = $select->getAdapter();
+            $select->join(
+                $join_table,
+                $db->quoteIdentifier($join_table) . '.' . $db->quoteIdentifier($local) . ' = ' . $db->quote($this->_data['id']).
+                ' AND '.
+                $db->quoteIdentifier($join_table) . '.' . $db->quoteIdentifier($foreign) . ' = '.$db->quoteIdentifier($their_table) . '.' . $db->quoteIdentifier('id')
+                , ''
+            );
+
+            return $select;
         }
 
         return false;
