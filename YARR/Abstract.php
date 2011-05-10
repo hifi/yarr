@@ -28,6 +28,8 @@ abstract class YARR_Abstract
 
     protected $_data;
     protected $_dirty;
+    protected $_has_one;
+    protected $_has_many;
 
     static public function setDefaultAdapter(Zend_Db_Adapter_Abstract $db)
     {
@@ -65,6 +67,9 @@ abstract class YARR_Abstract
     function __construct($data)
     {
         $this->_data = array();
+        $this->_dirty = array();
+        $this->_has_one = array();
+        $this->_has_many = array();
 
         /* handle defaults */
         foreach (static::fields() as $k => $desc) {
@@ -83,7 +88,6 @@ abstract class YARR_Abstract
             exit;
         }
         $this->_data = array_replace($this->_data, $data);
-        $this->_dirty = array();
     }
 
     static public function get($id)
@@ -110,6 +114,20 @@ abstract class YARR_Abstract
 
     function __get($k)
     {
+        if (array_key_exists($k, static::$has_many)) {
+            if (!array_key_exists('data', $this->_has_many)) {
+                $this->_has_many[$k] = $this->$k()->getAll();
+            }
+            return $this->_has_many[$k];
+        }
+
+        if (array_key_exists($k, static::$has_one)) {
+            if (!array_key_exists('data', $this->_has_one)) {
+                $this->_has_one[$k] = $this->$k()->getOne();
+            }
+            return $this->_has_one[$k];
+        }
+
         if (array_key_exists($k, $this->_data)) {
             return $this->_data[$k];
         }
