@@ -29,6 +29,7 @@ abstract class YARR_Abstract
 
     protected $_data;
     protected $_dirty;
+    protected $_belongs_to;
     protected $_has_one;
     protected $_has_many;
     protected $_has_and_belongs_to_many;
@@ -75,6 +76,7 @@ abstract class YARR_Abstract
     {
         $this->_data = array();
         $this->_dirty = array();
+        $this->_belongs_to = array();
         $this->_has_one = array();
         $this->_has_many = array();
         $this->_has_and_belongs_to_many = array();
@@ -136,6 +138,13 @@ abstract class YARR_Abstract
             return $this->_has_one[$k];
         }
 
+        if (array_key_exists($k, static::$belongs_to)) {
+            if (!array_key_exists('data', $this->_belongs_to)) {
+                $this->_belongs_to[$k] = $this->$k()->getOne();
+            }
+            return $this->_belongs_to[$k];
+        }
+
         if (array_key_exists($k, static::$has_and_belongs_to_many)) {
             if (!array_key_exists('data', $this->_has_and_belongs_to_many)) {
                 $this->_has_and_belongs_to_many[$k] = $this->$k()->getAll();
@@ -172,6 +181,12 @@ abstract class YARR_Abstract
 
         if (array_key_exists($name, static::$has_one)) {
             $desc = static::$has_one[$name];
+            $local = isset($desc['local']) ? $desc['local'] : 'id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : strtolower($desc['class']).'_id';
+        }
+
+        if (array_key_exists($name, static::$belongs_to)) {
+            $desc = static::$belongs_to[$name];
             $local = isset($desc['local']) ? $desc['local'] : strtolower($desc['class']).'_id';
             $foreign = isset($desc['foreign']) ? $desc['foreign'] : 'id';
         }
