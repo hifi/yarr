@@ -47,7 +47,12 @@ abstract class YARR_Abstract
         $table = constant($class.'::table');
 
         if (!$table) {
-            return strtolower($class);
+            $table = strtolower($class);
+            if ($table[strlen($table)-1] == 's') {
+                $table .= 'es';
+            } else {
+                $table .= 's';
+            }
         }
 
         return $table;
@@ -152,12 +157,12 @@ abstract class YARR_Abstract
         if (array_key_exists($name, static::$has_many)) {
             $desc = static::$has_many[$name];
             $local = isset($desc['local']) ? $desc['local'] : 'id';
-            $foreign = isset($desc['foreign']) ? $desc['foreign'] : $desc['class']::table().'_id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : strtolower($desc['class']).'_id';
         }
 
         if (array_key_exists($name, static::$has_one)) {
             $desc = static::$has_one[$name];
-            $local = isset($desc['local']) ? $desc['local'] : $desc['class']::table().'_id';
+            $local = isset($desc['local']) ? $desc['local'] : strtolower($desc['class']).'_id';
             $foreign = isset($desc['foreign']) ? $desc['foreign'] : 'id';
         }
 
