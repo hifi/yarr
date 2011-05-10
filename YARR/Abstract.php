@@ -20,8 +20,8 @@ abstract class YARR_Abstract
 {
     const table = false;
 
-    protected static $fields = false;
     private static $db = false;
+    private static $fields = array();
 
     protected static $has_one = array();
     protected static $has_many = array();
@@ -54,11 +54,13 @@ abstract class YARR_Abstract
 
     static public function fields()
     {
-        if (!static::$fields) {
-            static::$fields = self::$db->describeTable(static::table());
+        $class = get_called_class();
+
+        if (!array_key_exists($class, self::$fields)) {
+            self::$fields[$class] = self::$db->describeTable(static::table());
         }
 
-        return static::$fields;
+        return self::$fields[$class];
     }
 
     function __construct($data)
