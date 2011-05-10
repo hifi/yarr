@@ -25,7 +25,6 @@ abstract class YARR_Abstract
 
     protected static $has_one = array();
     protected static $has_many = array();
-    protected static $belongs_to = array();
 
     protected $_data;
     protected $_dirty;
@@ -130,27 +129,25 @@ abstract class YARR_Abstract
 
     function __call($name, $args)
     {
+        $desc = false;
+
         if (array_key_exists($name, static::$has_many)) {
             $desc = static::$has_many[$name];
-            $key = isset($desc['key']) ? $desc['key'] : static::table().'_id';
-            $select = $desc['class']::select();
-            $db = $select->getAdapter();
-            return $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
-        }
-
-        if (array_key_exists($name, static::$belongs_to)) {
-            $desc = static::$belongs_to[$name];
-            $key = isset($desc['key']) ? $desc['key'] : static::table().'_id';
-            $select = $desc['class']::select();
-            $db = $select->getAdapter();
-            return $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
+            $local = isset($desc['local']) ? $desc['local'] : 'id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : $desc['class']::table().'_id';
         }
 
         if (array_key_exists($name, static::$has_one)) {
             $desc = static::$has_one[$name];
-            $key = isset($desc['key']) ? $desc['key'] : $desc['class']::table().'_id';
-            if (array_key_exists($key, $this->_data)) {
-                return $desc['class']::select()->where('id = ?', $this->_data[$key]);
+            $local = isset($desc['local']) ? $desc['local'] : $desc['class']::table().'_id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : 'id';
+        }
+
+        if ($desc) {
+            $select = $desc['class']::select();
+            $db = $select->getAdapter();
+            if (array_key_exists($local, $this->_data)) {
+                return $select->where($db->quoteIdentifier($foreign).' = ?', $this->_data[$local]);
             }
         }
 
