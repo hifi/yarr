@@ -172,17 +172,17 @@ abstract class YARR_Abstract
         return false;
     }
 
-    function toArray()
+    public function toArray()
     {
         return $this->_data;
     }
 
-    function validate()
+    public function validate()
     {
         return true;
     }
 
-    function save()
+    public function save()
     {
         if (!$this->validate()) {
             return false;
@@ -208,7 +208,7 @@ abstract class YARR_Abstract
         return true;
     }
 
-    function delete()
+    public function delete()
     {
         if ($this->_data['id']) {
             self::$db->delete(static::table(), self::$db->quoteInto('id = ?', $this->_data['id']));

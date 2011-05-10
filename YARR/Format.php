@@ -26,7 +26,7 @@ class YARR_Format
         $this->_obj = $obj;
     }
 
-    function supported($type)
+    public function supported($type)
     {
         if ($type == 'html')
             return true;
@@ -34,13 +34,13 @@ class YARR_Format
         return false;
     }
 
-    function type($type)
+    public function type($type)
     {
         $this->_type = $type;
         return $this;
     }
 
-    static function to($type, $value)
+    static public function to($type, $value)
     {
         if ($type == 'html') {
             return htmlspecialchars($value);
@@ -49,7 +49,7 @@ class YARR_Format
         return $value;
     }
 
-    static function from($type, $value)
+    static public function from($type, $value)
     {
         if ($type == 'html') {
             return htmlspecialchars_decode($value);
