@@ -14,10 +14,6 @@ class YARR
     protected $_data;
     protected $_dirty;
 
-    protected static $_true = true;
-    protected static $_false = false;
-    protected static $_null = null;
-
     static public function setDb(Zend_Db_Adapter_Abstract $db)
     {
         self::$db = $db;
@@ -95,13 +91,13 @@ class YARR
         return new YARR_Select($class::table());
     }
 
-    function &__get($k)
+    function __get($k)
     {
         if (array_key_exists($k, $this->_data)) {
             return $this->_data[$k];
         }
 
-        return self::$_null;
+        return null;
     }
 
     function __set($k, $v)
@@ -114,17 +110,14 @@ class YARR
         return false;
     }
 
-    function &__call($name, $args)
+    function __call($name, $args)
     {
         if (array_key_exists($name, static::$has_many)) {
             $desc = static::$has_many[$name];
-            $key = isset($desc['key']) ? $desc['key'] : self::table().'_id';
-
-            $select = call_user_func_array(array($desc['class'], 'select'), array());
+            $key = isset($desc['key']) ? $desc['key'] : static::table().'_id';
+            $select = $desc['class']::select();
             $db = $select->getAdapter();
-            $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
-
-            return $select;
+            return $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
         }
 
         if (array_key_exists($name, static::$belongs_to)) {
@@ -132,25 +125,23 @@ class YARR
             $key = isset($desc['key']) ? $desc['key'] : static::table().'_id';
             $select = $desc['class']::select();
             $db = $select->getAdapter();
-            $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
-            return $select;
+            return $select->where($db->quoteIdentifier($key).' = ?', $this->_data['id']);
         }
 
         if (array_key_exists($name, static::$has_one)) {
             $desc = static::$has_one[$name];
             $key = isset($desc['key']) ? $desc['key'] : $desc['class']::table().'_id';
             if (array_key_exists($key, $this->_data)) {
-                $tmp = $desc['class']::select()->where('id = ?', $this->_data[$key]);
-                return $tmp;
+                return $desc['class']::select()->where('id = ?', $this->_data[$key]);
             }
         }
 
-        return self::$_false;
+        return false;
     }
 
     function toArray()
     {
-        return (array)(clone (object)$this->_data);
+        return $this->_data;
     }
 
     function validate()
