@@ -36,6 +36,8 @@ abstract class YARR_Abstract
     protected $_has_many;
     protected $_has_and_belongs_to_many;
 
+    public $errors = array();
+
     static public function setDefaultAdapter(Zend_Db_Adapter_Abstract $db)
     {
         self::$db = $db;
@@ -238,7 +240,40 @@ abstract class YARR_Abstract
 
     public function validate()
     {
-        return true;
+        $this->errors = array();
+        $fields = $this->fields();
+
+        foreach (array_keys($this->_dirty) as $k) {
+            $field = $fields[$k];
+            $data = $this->_data[$k];
+
+            switch ($field['DATA_TYPE']) {
+                case 'VARCHAR':
+                    if (strlen($data) > $field['LENGTH'])
+                        $this->errors[$k] = 'maximum length of ' . $field['LENGTH'] . ' exceeded';
+                    break;
+                case 'INTEGER':
+                    if (!preg_match('/^-?[0-9]*$/', $data))
+                        $this->errors[$k] = 'not integer';
+                    else if ($field['UNSIGNED'] && $data < 0)
+                        $this->errors[$k] = 'only unsigned integers allowed';
+                    break;
+                case 'DECIMAL':
+                    if (!preg_match('/^-?[0-9]*\.?[0-9]*$/', $data))
+                        $this->errors[$k] = 'not decimal';
+                    break;
+                case 'TEXT':
+                    break;
+                default:
+                    break;
+            }
+
+            if (!isset($this->errors[$k]) && !$field['NULLABLE'] && ($data === null || strlen($data) == 0) && $k != 'id') {
+                $this->errors[$k] = 'cannot be null';
+            }
+        }
+
+        return (count($this->errors) == 0);
     }
 
     public function save()
