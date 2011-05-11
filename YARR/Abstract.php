@@ -23,13 +23,14 @@ abstract class YARR_Abstract
     private static $db = false;
     private static $fields = array();
 
+    protected static $belongs_to = array();
     protected static $has_one = array();
     protected static $has_many = array();
-    protected static $belongs_to = array();
     protected static $has_and_belongs_to_many = array();
 
     protected $_data;
     protected $_dirty;
+
     protected $_belongs_to;
     protected $_has_one;
     protected $_has_many;
@@ -125,29 +126,29 @@ abstract class YARR_Abstract
 
     function __get($k)
     {
-        if (array_key_exists($k, static::$has_many)) {
-            if (!array_key_exists('data', $this->_has_many)) {
-                $this->_has_many[$k] = $this->$k()->getAll();
-            }
-            return $this->_has_many[$k];
-        }
-
-        if (array_key_exists($k, static::$has_one)) {
-            if (!array_key_exists('data', $this->_has_one)) {
-                $this->_has_one[$k] = $this->$k()->getOne();
-            }
-            return $this->_has_one[$k];
-        }
-
         if (array_key_exists($k, static::$belongs_to)) {
-            if (!array_key_exists('data', $this->_belongs_to)) {
+            if (!array_key_exists($k, $this->_belongs_to)) {
                 $this->_belongs_to[$k] = $this->$k()->getOne();
             }
             return $this->_belongs_to[$k];
         }
 
+        if (array_key_exists($k, static::$has_one)) {
+            if (!array_key_exists($k, $this->_has_one)) {
+                $this->_has_one[$k] = $this->$k()->getOne();
+            }
+            return $this->_has_one[$k];
+        }
+
+        if (array_key_exists($k, static::$has_many)) {
+            if (!array_key_exists($k, $this->_has_many)) {
+                $this->_has_many[$k] = $this->$k()->getAll();
+            }
+            return $this->_has_many[$k];
+        }
+
         if (array_key_exists($k, static::$has_and_belongs_to_many)) {
-            if (!array_key_exists('data', $this->_has_and_belongs_to_many)) {
+            if (!array_key_exists($k, $this->_has_and_belongs_to_many)) {
                 $this->_has_and_belongs_to_many[$k] = $this->$k()->getAll();
             }
             return $this->_has_and_belongs_to_many[$k];
@@ -174,10 +175,10 @@ abstract class YARR_Abstract
     {
         $desc = false;
 
-        if (array_key_exists($name, static::$has_many)) {
-            $desc = static::$has_many[$name];
-            $local = isset($desc['local']) ? $desc['local'] : 'id';
-            $foreign = isset($desc['foreign']) ? $desc['foreign'] : strtolower($desc['class']).'_id';
+        if (array_key_exists($name, static::$belongs_to)) {
+            $desc = static::$belongs_to[$name];
+            $local = isset($desc['local']) ? $desc['local'] : strtolower($desc['class']).'_id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : 'id';
         }
 
         if (array_key_exists($name, static::$has_one)) {
@@ -186,10 +187,10 @@ abstract class YARR_Abstract
             $foreign = isset($desc['foreign']) ? $desc['foreign'] : strtolower($desc['class']).'_id';
         }
 
-        if (array_key_exists($name, static::$belongs_to)) {
-            $desc = static::$belongs_to[$name];
-            $local = isset($desc['local']) ? $desc['local'] : strtolower($desc['class']).'_id';
-            $foreign = isset($desc['foreign']) ? $desc['foreign'] : 'id';
+        if (array_key_exists($name, static::$has_many)) {
+            $desc = static::$has_many[$name];
+            $local = isset($desc['local']) ? $desc['local'] : 'id';
+            $foreign = isset($desc['foreign']) ? $desc['foreign'] : strtolower($desc['class']).'_id';
         }
 
         if ($desc) {
