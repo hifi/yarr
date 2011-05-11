@@ -95,10 +95,12 @@ abstract class YARR_Abstract
             $this->_data[$k] = $default;
         }
 
-        if (!is_array($data)) {
-            debug_print_backtrace();
-            exit;
+        if ($this->_data['id'] === null) {
+            foreach (array_keys($this->_data) as $k) {
+                $this->_dirty[$k] = true;
+            }
         }
+
         $this->_data = array_replace($this->_data, $data);
     }
 
