@@ -261,20 +261,24 @@ abstract class YARR_Abstract
             $data = $this->_data[$k];
 
             switch ($field['DATA_TYPE']) {
+                case 'varchar':
                 case 'VARCHAR':
                     if (strlen($data) > $field['LENGTH'])
-                        $this->errors[$k] = 'maximum length of ' . $field['LENGTH'] . ' exceeded';
+                        $this->errors[$k][] = 'maximum length of ' . $field['LENGTH'] . ' exceeded';
                     break;
+                case 'int':
                 case 'INTEGER':
                     if (!preg_match('/^-?[0-9]*$/', $data))
-                        $this->errors[$k] = 'not integer';
+                        $this->errors[$k][] = 'not integer';
                     else if ($field['UNSIGNED'] && $data < 0)
-                        $this->errors[$k] = 'only unsigned integers allowed';
+                        $this->errors[$k][] = 'only unsigned integers allowed';
                     break;
+                case 'decimal':
                 case 'DECIMAL':
                     if (!preg_match('/^-?[0-9]*\.?[0-9]*$/', $data))
-                        $this->errors[$k] = 'not decimal';
+                        $this->errors[$k][] = 'not decimal';
                     break;
+                case 'text':
                 case 'TEXT':
                     break;
                 default:
@@ -282,7 +286,7 @@ abstract class YARR_Abstract
             }
 
             if (!isset($this->errors[$k]) && !$field['NULLABLE'] && ($data === null || strlen($data) == 0) && $k != 'id') {
-                $this->errors[$k] = 'cannot be null';
+                $this->errors[$k][] = 'cannot be null';
             }
         }
 
