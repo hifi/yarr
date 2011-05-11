@@ -54,12 +54,15 @@ abstract class YARR_Abstract
         $table = constant($class.'::table');
 
         if (!$table) {
-            $table = strtolower($class);
-            if ($table[strlen($table)-1] == 's') {
-                $table .= 'es';
-            } else {
-                $table .= 's';
+            $tmp = explode('_', strtolower($class));
+            foreach ($tmp as $k => $v) {
+                if ($v[strlen($v)-1] == 's') {
+                    $tmp[$k] .= 'es';
+                } else {
+                    $tmp[$k] .= 's';
+                }
             }
+            $table = implode('_', $tmp);
         }
 
         return $table;
