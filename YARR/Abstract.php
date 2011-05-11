@@ -16,6 +16,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+require_once 'Zend/Db/Adapter/Abstract.php';
+
+require_once 'Zend/Db.php';
+
+require_once 'YARR/Select/Object.php';
+
+require_once 'YARR/Select.php';
+
 abstract class YARR_Abstract
 {
     const table = false;

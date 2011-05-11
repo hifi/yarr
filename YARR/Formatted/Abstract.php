@@ -16,6 +16,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+require_once 'YARR/Format.php';
+
+require_once 'YARR/Abstract.php';
+
 abstract class YARR_Formatted_Abstract extends YARR_Abstract
 {
     protected $_format;

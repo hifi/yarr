@@ -16,6 +16,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+require_once 'YARR/Select.php';
+
+require_once 'YARR/Abstract.php';
+
 class YARR_Select_Object extends YARR_Select
 {
     protected $class;

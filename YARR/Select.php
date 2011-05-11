@@ -16,6 +16,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+require_once 'Zend/Db/Select.php';
+
+require_once 'YARR/Abstract.php';
+
 class YARR_Select extends Zend_Db_Select implements Countable, Iterator
 {
     protected $db;
