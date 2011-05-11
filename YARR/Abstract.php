@@ -212,7 +212,9 @@ abstract class YARR_Abstract
 
             $my_table = static::table();
             $their_table = $desc['class']::table();
-            if ($my_table < $their_table)
+            if (isset($desc['join_table']))
+                $join_table = $desc['join_table'];
+            else if ($my_table < $their_table)
                 $join_table = $my_table . '_' . $their_table;
             else
                 $join_table = $their_table . '_' . $my_table;
