@@ -105,6 +105,9 @@ abstract class YARR_Abstract
             else if (preg_match("/^'(.*)'$/", $default, $m)) {
                 $default = $m[1];
             }
+            else {
+                $default = new Zend_Db_Expr($default);
+            }
             $this->_data[$k] = $default;
         }
 
