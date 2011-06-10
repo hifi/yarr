@@ -99,7 +99,7 @@ abstract class YARR_Abstract
         /* handle defaults */
         foreach (static::fields() as $k => $desc) {
             $default = $desc['DEFAULT'];
-            if ($default == 'NULL') {
+            if ($default === NULL || $default == 'NULL') {
                 $default = NULL;
             }
             else if (preg_match("/^'(.*)'$/", $default, $m)) {
