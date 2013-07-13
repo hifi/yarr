@@ -138,8 +138,7 @@ abstract class YARR_Abstract
 
     static public function selectArray()
     {
-        $class = get_called_class();
-        return new YARR_Select($class::table());
+        return new YARR_Select(static::table());
     }
 
     function __get($k)
@@ -263,25 +262,22 @@ abstract class YARR_Abstract
             $field = $fields[$k];
             $data = $this->_data[$k];
 
-            switch ($field['DATA_TYPE']) {
-                case 'varchar':
+            switch (strtoupper($field['DATA_TYPE'])) {
                 case 'VARCHAR':
                     if (strlen($data) > $field['LENGTH'])
                         $this->errors[$k][] = 'maximum length of ' . $field['LENGTH'] . ' exceeded';
                     break;
-                case 'int':
+                case 'INT':
                 case 'INTEGER':
                     if (!preg_match('/^-?[0-9]*$/', $data))
                         $this->errors[$k][] = 'not integer';
                     else if ($field['UNSIGNED'] && $data < 0)
                         $this->errors[$k][] = 'only unsigned integers allowed';
                     break;
-                case 'decimal':
                 case 'DECIMAL':
                     if (!preg_match('/^-?[0-9]*\.?[0-9]*$/', $data))
                         $this->errors[$k][] = 'not decimal';
                     break;
-                case 'text':
                 case 'TEXT':
                     break;
                 default:
@@ -299,12 +295,12 @@ abstract class YARR_Abstract
     public function save()
     {
         if (!$this->validate()) {
-            return false;
+            throw new Exception('Validate failed.');
         }
 
         if ($this->_data['id']) {
             if (count($this->_dirty) == 0) {
-                return true;
+                return;
             }
 
             $data = array();
@@ -319,7 +315,6 @@ abstract class YARR_Abstract
         }
 
         $this->_dirty = array();
-        return true;
     }
 
     public function delete()
@@ -328,9 +323,6 @@ abstract class YARR_Abstract
             self::$db->delete(static::table(), self::$db->quoteInto('id = ?', $this->_data['id']));
             $this->_data['id'] = null;
             $this->_dirty = array_keys($this->_data);
-            return true;
         }
-
-        return false;
     }
 }
