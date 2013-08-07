@@ -99,14 +99,11 @@ abstract class YARR_Abstract
         /* handle defaults */
         foreach (static::fields() as $k => $desc) {
             $default = $desc['DEFAULT'];
-            if ($default === NULL || $default == 'NULL') {
+            if ($default === NULL || strtoupper($default) == 'NULL') {
                 $default = NULL;
             }
             else if (preg_match("/^'(.*)'$/", $default, $m)) {
                 $default = $m[1];
-            }
-            else {
-                $default = new Zend_Db_Expr($default);
             }
             $this->_data[$k] = $default;
         }
@@ -284,7 +281,7 @@ abstract class YARR_Abstract
                     break;
             }
 
-            if (!isset($this->errors[$k]) && !$field['NULLABLE'] && ($data === null || strlen($data) == 0) && $k != 'id') {
+            if (!$field['NULLABLE'] && $data === null && $k != 'id') {
                 $this->errors[$k][] = 'cannot be null';
             }
         }
@@ -310,6 +307,7 @@ abstract class YARR_Abstract
 
             self::$db->update(static::table(), $data, self::$db->quoteInto('id = ?', $this->_data['id']));
         } else {
+            unset($this->_data['id']);
             self::$db->insert(static::table(), $this->_data);
             $this->_data['id'] = self::$db->lastInsertId();
         }
