@@ -45,10 +45,20 @@ class YARR_Select extends Zend_Db_Select implements Countable, Iterator
         return $this->db->fetchAll($this);
     }
 
+    public function fetchOne()
+    {
+        return $this->db->fetchOne($this);
+    }
+
     public function count()
     {
         $select = clone $this;
         return $this->db->fetchOne($select->reset('columns')->columns('COUNT(*)'));
+    }
+
+    public function copy()
+    {
+        return clone $this;
     }
 
     public function current()
