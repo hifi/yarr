@@ -169,10 +169,9 @@ abstract class YARR_Abstract
     {
         if (array_key_exists($k, $this->_data)) {
             $this->_dirty[$k] = true;
-            return ($this->_data[$k] = $v);
         }
 
-        return false;
+        return ($this->_data[$k] = $v);
     }
 
     function __call($name, $args)
@@ -287,10 +286,12 @@ abstract class YARR_Abstract
         $adapter = static::getAdapter();
         $table = static::table();
         $table_id = $adapter->quoteIdentifier($table . '.id');
+        $fields = $this->fields();
 
         $data = array();
         foreach (array_keys($this->_dirty) as $k) {
-            $data[$k] = $this->_data[$k];
+            if (array_key_exists($k, $fields))
+                $data[$k] = $this->_data[$k];
         }
 
         if ($this->_data['id']) {
