@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2013 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,38 +22,38 @@ require_once 'YARR/Abstract.php';
 
 class YARR_Select extends Zend_Db_Select implements Countable, Iterator
 {
-    protected $db;
+    protected $adapter;
     protected $iterator_stmt;
     protected $iterator_pos;
     protected $iterator_cur;
 
-    function __construct($table)
+    function __construct($table, $adapter = false)
     {
-        $this->db = YARR_Abstract::getDefaultAdapter();
-        parent::__construct($this->db);
+        $this->adapter = $adapter ? $adapter : YARR_Abstract::getAdapter();
+        parent::__construct($this->adapter);
         $this->from($table);
     }
 
     public function getOne()
     {
-        $row = $this->db->fetchRow($this);
+        $row = $this->adapter->fetchRow($this);
         return $row ? $row : null;
     }
 
     public function getAll()
     {
-        return $this->db->fetchAll($this);
+        return $this->adapter->fetchAll($this);
     }
 
     public function fetchOne()
     {
-        return $this->db->fetchOne($this);
+        return $this->adapter->fetchOne($this);
     }
 
     public function count()
     {
         $select = clone $this;
-        return $this->db->fetchOne($select->reset('columns')->columns('COUNT(*)'));
+        return $this->adapter->fetchOne($select->reset('columns')->columns('COUNT(*)'));
     }
 
     public function copy()
@@ -79,7 +79,7 @@ class YARR_Select extends Zend_Db_Select implements Countable, Iterator
 
     public function rewind()
     {
-        $this->iterator_stmt = $this->db->query($this);
+        $this->iterator_stmt = $this->adapter->query($this);
         $this->iterator_pos = 0;
         $this->iterator_cur = $this->iterator_stmt->fetch();
     }

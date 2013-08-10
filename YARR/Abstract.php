@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2013 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@ abstract class YARR_Abstract
 {
     const table = false;
 
-    private static $db = false;
+    private static $adapters = array();
     private static $fields = array();
 
     protected static $belongs_to = array();
@@ -46,20 +46,31 @@ abstract class YARR_Abstract
 
     public $errors = array();
 
-    static public function setDefaultAdapter(Zend_Db_Adapter_Abstract $db)
+    static public function setAdapter(Zend_Db_Adapter_Abstract $adapter)
     {
-        self::$db = $db;
+        $class = get_called_class();
+        self::$adapters[$class] = $adapter;
     }
 
-    static public function getDefaultAdapter()
+    static public function getAdapter()
     {
-        return self::$db;
+        $class = get_called_class();
+
+        if (!array_key_exists($class, self::$adapters)) {
+            if (array_key_exists('YARR_Abstract', self::$adapters)) {
+                return self::$adapters['YARR_Abstract'];
+            }
+
+            throw new Exception('No database adapters configured for YARR.');
+        }
+
+        return self::$adapters[$class];
     }
 
     static public function table()
     {
         $class = get_called_class();
-        $table = constant($class.'::table');
+        $table = static::table;
 
         if (!$table) {
             $tmp = explode('_', strtolower($class));
@@ -81,7 +92,7 @@ abstract class YARR_Abstract
         $class = get_called_class();
 
         if (!array_key_exists($class, self::$fields)) {
-            self::$fields[$class] = self::$db->describeTable(static::table());
+            self::$fields[$class] = static::getAdapter()->describeTable(static::table());
         }
 
         return self::$fields[$class];
@@ -130,7 +141,7 @@ abstract class YARR_Abstract
 
     static public function select()
     {
-        return new YARR_Select_Object(get_called_class());
+        return new YARR_Select_Object(get_called_class(), static::getAdapter());
     }
 
     static public function selectArray()
@@ -209,9 +220,9 @@ abstract class YARR_Abstract
 
         if ($desc) {
             $select = $desc['class']::select();
-            $db = $select->getAdapter();
+            $adapter = $select->getAdapter();
             if (array_key_exists($local, $this->_data)) {
-                return $select->where($db->quoteIdentifier($foreign).' = ?', $this->_data[$local]);
+                return $select->where($adapter->quoteIdentifier($foreign).' = ?', $this->_data[$local]);
             }
         }
 
@@ -230,12 +241,12 @@ abstract class YARR_Abstract
                 $join_table = $their_table . '_' . $my_table;
 
             $select = $desc['class']::select();
-            $db = $select->getAdapter();
+            $adapter = $select->getAdapter();
             $select->join(
                 $join_table,
-                $db->quoteIdentifier($join_table) . '.' . $db->quoteIdentifier($local) . ' = ' . $db->quote($this->_data['id']).
+                $adapter->quoteIdentifier($join_table) . '.' . $adapter->quoteIdentifier($local) . ' = ' . $adapter->quote($this->_data['id']).
                 ' AND '.
-                $db->quoteIdentifier($join_table) . '.' . $db->quoteIdentifier($foreign) . ' = '.$db->quoteIdentifier($their_table) . '.' . $db->quoteIdentifier('id')
+                $adapter->quoteIdentifier($join_table) . '.' . $adapter->quoteIdentifier($foreign) . ' = '. $adapter->quoteIdentifier($their_table) . '.' . $adapter->quoteIdentifier('id')
                 , ''
             );
 
@@ -305,11 +316,11 @@ abstract class YARR_Abstract
                 $data[$k] = $this->_data[$k];
             }
 
-            self::$db->update(static::table(), $data, self::$db->quoteInto('id = ?', $this->_data['id']));
+            static::getAdapter()->update(static::table(), $data, static::getAdapter()->quoteInto('id = ?', $this->_data['id']));
         } else {
             unset($this->_data['id']);
-            self::$db->insert(static::table(), $this->_data);
-            $this->_data['id'] = self::$db->lastInsertId();
+            static::getAdapter()->insert(static::table(), $this->_data);
+            $this->_data['id'] = static::getAdapter()->lastInsertId();
         }
 
         $this->_dirty = array();
@@ -318,7 +329,7 @@ abstract class YARR_Abstract
     public function delete()
     {
         if ($this->_data['id']) {
-            self::$db->delete(static::table(), self::$db->quoteInto('id = ?', $this->_data['id']));
+            static::getAdapter()->delete(static::table(), static::getAdapter()->quoteInto('id = ?', $this->_data['id']));
             $this->_data['id'] = null;
             $this->_dirty = array_keys($this->_data);
         }

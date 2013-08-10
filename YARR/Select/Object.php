@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2013 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@ class YARR_Select_Object extends YARR_Select
 
     function __construct($class)
     {
-        parent::__construct($class::table());
+        parent::__construct($class::table(), $class::getAdapter());
         $this->class = $class;
     }
 
