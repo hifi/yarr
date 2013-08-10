@@ -22,6 +22,8 @@ require_once 'Zend/Db.php';
 
 require_once 'YARR/Select.php';
 
+require_once 'YARR/Format.php';
+
 abstract class YARR_Abstract
 {
     const table = false;
@@ -36,6 +38,7 @@ abstract class YARR_Abstract
 
     protected $_data;
     protected $_dirty;
+    protected $_format;
 
     protected $_belongs_to;
     protected $_has_one;
@@ -110,6 +113,9 @@ abstract class YARR_Abstract
         }
 
         $this->_data = array_replace($this->_data, $data);
+
+        if (YARR_Format::initialized())
+            $this->_format = new YARR_Format($this);
     }
 
     static public function get($id)
@@ -130,6 +136,10 @@ abstract class YARR_Abstract
 
     function __get($k)
     {
+        if ($this->_format && $this->_format->supported($k)) {
+            return $this->_format->type($k);
+        }
+
         if (array_key_exists($k, static::$belongs_to)) {
             if (!array_key_exists($k, $this->_belongs_to)) {
                 $this->_belongs_to[$k] = $this->$k()->getOne();
@@ -167,6 +177,10 @@ abstract class YARR_Abstract
 
     function __set($k, $v)
     {
+        if ($this->_format && $this->_format->supported($k)) {
+            return $this->_format->type($k);
+        }
+
         if (array_key_exists($k, $this->_data)) {
             $this->_dirty[$k] = true;
         }

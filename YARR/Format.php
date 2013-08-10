@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2013 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,36 @@
 class YARR_Format
 {
     protected $_obj;
-    protected $_type = 'html';
+    protected $_type;
+
+    static $formatters = array();
+
+    static function initialized()
+    {
+        return count(self::$formatters) > 0;
+    }
+
+    static function register($type, $to, $from)
+    {
+        self::$formatters[$type] = array(
+            $to,
+            $from
+        );
+    }
+
+    static function registerDefault()
+    {
+        if (count(self::$formatters) == 0) {
+            self::$formatters['raw'] = array(
+                function($to) { return $to; },
+                function($from) { return $from; }
+            );
+            self::$formatters['html'] = array(
+                function($to) { return htmlspecialchars($to); },
+                function($from) { return htmlspecialchars_decode($from); }
+            );
+        }
+    }
 
     function __construct($obj)
     {
@@ -28,10 +57,7 @@ class YARR_Format
 
     public function supported($type)
     {
-        if ($type == 'html')
-            return true;
-
-        return false;
+        return array_key_exists($type, self::$formatters);
     }
 
     public function type($type)
@@ -42,8 +68,9 @@ class YARR_Format
 
     static public function to($type, $value)
     {
-        if ($type == 'html') {
-            return htmlspecialchars($value);
+        if (array_key_exists($type, self::$formatters)) {
+            $formatter = self::$formatters[$type][0];
+            return $formatter($value);
         }
 
         return $value;
@@ -51,8 +78,9 @@ class YARR_Format
 
     static public function from($type, $value)
     {
-        if ($type == 'html') {
-            return htmlspecialchars_decode($value);
+        if (array_key_exists($type, self::$formatters)) {
+            $formatter = self::$formatters[$type][1];
+            return $formatter($value);
         }
 
         return $value;
