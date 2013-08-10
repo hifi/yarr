@@ -23,26 +23,68 @@ require_once 'YARR/Abstract.php';
 class YARR_Select extends Zend_Db_Select implements Countable, Iterator
 {
     protected $adapter;
+    protected $class;
     protected $iterator_stmt;
     protected $iterator_pos;
     protected $iterator_cur;
 
-    function __construct($table, $adapter = false)
+    static function fromObject($class, $adapter = false)
+    {
+        $select = new YARR_Select($class::table(), $adapter);
+        $select->asObject($class);
+        return $select;
+    }
+
+    static function fromTable($table, $adapter = false)
+    {
+        return new YARR_Select($table, $adapter);
+    }
+
+    public function __construct($table, $adapter = false)
     {
         $this->adapter = $adapter ? $adapter : YARR_Abstract::getAdapter();
+        $this->class = false;
         parent::__construct($this->adapter);
         $this->from($table);
+    }
+
+    public function asArray()
+    {
+        $this->class = false;
+        return $this;
+    }
+
+    public function asObject($class)
+    {
+        $this->class = $class;
+        return $this;
     }
 
     public function getOne()
     {
         $row = $this->adapter->fetchRow($this);
+
+        if ($this->class)
+            return $row ? new $this->class($row) : null;
+
         return $row ? $row : null;
     }
 
     public function getAll()
     {
-        return $this->adapter->fetchAll($this);
+        $rows = $this->adapter->fetchAll($this);
+
+        if ($this->class) {
+            $objs = array();
+
+            foreach ($rows as $row) {
+                $objs[] = new $this->class($row);
+            }
+
+            return $objs;
+        }
+
+        return $rows;
     }
 
     public function fetchOne()
@@ -63,6 +105,9 @@ class YARR_Select extends Zend_Db_Select implements Countable, Iterator
 
     public function current()
     {
+        if ($this->class)
+            return $this->iterator_cur ? new $this->class($this->iterator_cur) : null;
+
         return $this->iterator_cur;
     }
 

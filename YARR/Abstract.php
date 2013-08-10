@@ -20,8 +20,6 @@ require_once 'Zend/Db/Adapter/Abstract.php';
 
 require_once 'Zend/Db.php';
 
-require_once 'YARR/Select/Object.php';
-
 require_once 'YARR/Select.php';
 
 abstract class YARR_Abstract
@@ -107,22 +105,8 @@ abstract class YARR_Abstract
         $this->_has_many = array();
         $this->_has_and_belongs_to_many = array();
 
-        /* handle defaults */
         foreach (static::fields() as $k => $desc) {
-            $default = $desc['DEFAULT'];
-            if ($default === NULL || strtoupper($default) == 'NULL') {
-                $default = NULL;
-            }
-            else if (preg_match("/^'(.*)'$/", $default, $m)) {
-                $default = $m[1];
-            }
-            $this->_data[$k] = $default;
-        }
-
-        if ($this->_data['id'] === null) {
-            foreach (array_keys($this->_data) as $k) {
-                $this->_dirty[$k] = true;
-            }
+            $this->_data[$k] = null;
         }
 
         $this->_data = array_replace($this->_data, $data);
@@ -141,12 +125,7 @@ abstract class YARR_Abstract
 
     static public function select()
     {
-        return new YARR_Select_Object(get_called_class(), static::getAdapter());
-    }
-
-    static public function selectArray()
-    {
-        return new YARR_Select(static::table());
+        return YARR_Select::fromObject(get_called_class(), static::getAdapter());
     }
 
     function __get($k)
@@ -222,7 +201,7 @@ abstract class YARR_Abstract
             $select = $desc['class']::select();
             $adapter = $select->getAdapter();
             if (array_key_exists($local, $this->_data)) {
-                return $select->where($adapter->quoteIdentifier($foreign).' = ?', $this->_data[$local]);
+                return $select->where($adapter->quoteIdentifier($desc['class']::table() . '.' . $foreign).' = ?', $this->_data[$local]);
             }
         }
 
@@ -244,9 +223,9 @@ abstract class YARR_Abstract
             $adapter = $select->getAdapter();
             $select->join(
                 $join_table,
-                $adapter->quoteIdentifier($join_table) . '.' . $adapter->quoteIdentifier($local) . ' = ' . $adapter->quote($this->_data['id']).
+                $adapter->quoteIdentifier($join_table . '.' . $local) . ' = ' . $adapter->quote($this->_data['id']).
                 ' AND '.
-                $adapter->quoteIdentifier($join_table) . '.' . $adapter->quoteIdentifier($foreign) . ' = '. $adapter->quoteIdentifier($their_table) . '.' . $adapter->quoteIdentifier('id')
+                $adapter->quoteIdentifier($join_table . '.' . $foreign) . ' = '. $adapter->quoteIdentifier($their_table . '.id')
                 , ''
             );
 
@@ -266,8 +245,7 @@ abstract class YARR_Abstract
         $this->errors = array();
         $fields = $this->fields();
 
-        foreach (array_keys($this->_dirty) as $k) {
-            $field = $fields[$k];
+        foreach ($this->fields() as $k => $field) {
             $data = $this->_data[$k];
 
             switch (strtoupper($field['DATA_TYPE'])) {
@@ -292,7 +270,7 @@ abstract class YARR_Abstract
                     break;
             }
 
-            if (!$field['NULLABLE'] && $data === null && $k != 'id') {
+            if (!$field['NULLABLE'] && $data === null && $k != 'id' && ($this->_data['id'] == null && !$field['DEFAULT'] || $this->_data['id'])) {
                 $this->errors[$k][] = 'cannot be null';
             }
         }
@@ -306,30 +284,36 @@ abstract class YARR_Abstract
             throw new Exception('Validate failed.');
         }
 
+        $adapter = static::getAdapter();
+        $table = static::table();
+        $table_id = $adapter->quoteIdentifier($table . '.id');
+
+        $data = array();
+        foreach (array_keys($this->_dirty) as $k) {
+            $data[$k] = $this->_data[$k];
+        }
+
         if ($this->_data['id']) {
-            if (count($this->_dirty) == 0) {
+            if (count($data) == 0) {
                 return;
             }
 
-            $data = array();
-            foreach (array_keys($this->_dirty) as $k) {
-                $data[$k] = $this->_data[$k];
-            }
-
-            static::getAdapter()->update(static::table(), $data, static::getAdapter()->quoteInto('id = ?', $this->_data['id']));
+            $adapter->update($table, $data, $adapter->quoteInto($table_id . ' = ?', $this->_data['id']));
         } else {
-            unset($this->_data['id']);
-            static::getAdapter()->insert(static::table(), $this->_data);
-            $this->_data['id'] = static::getAdapter()->lastInsertId();
+            $adapter->insert(static::table(), $data);
+            $this->_data['id'] = $adapter->lastInsertId();
         }
 
         $this->_dirty = array();
+        $this->_data = static::select()->where($table_id . ' = ?', $this->_data['id'])->asArray()->getOne();
     }
 
     public function delete()
     {
         if ($this->_data['id']) {
-            static::getAdapter()->delete(static::table(), static::getAdapter()->quoteInto('id = ?', $this->_data['id']));
+            $adapter = static::getAdapter();
+            $table = static::table();
+            $adapter->delete($table, $adapter->quoteInto($adapter->quoteIdentifier($table . '.id') . ' = ?', $this->_data['id']));
             $this->_data['id'] = null;
             $this->_dirty = array_keys($this->_data);
         }
